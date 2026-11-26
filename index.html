@@ -209,6 +209,11 @@ select{width:auto}
 .prembox b{color:#fff;font-size:14px}
 .lnk{background:none;border:0;color:#B9BFEF;text-decoration:underline;padding:0;font-size:12px}
 
+.hm{display:grid;grid-template-columns:repeat(15,1fr);gap:5px;margin-top:12px}
+.hm button{aspect-ratio:1;border:0;border-radius:6px;background:var(--mist);font-size:11px;color:var(--mut)}
+.hm button.done{background:var(--ultra);color:#fff}.hm button.curr{background:var(--amber);color:var(--ink);font-weight:700}
+.badge{display:flex;gap:10px;align-items:center;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;background:#fff}
+.badge.off{opacity:.45;filter:grayscale(1)}.badge span{font-size:26px}
 @media (max-width:860px){
   .app{grid-template-columns:1fr}
   .side{display:none}
@@ -248,24 +253,16 @@ const CONFIG={
   priceLabel:"10 000 FCFA / mois",
   momoNumber:"+225 07 57 33 37 36",
   momoRaw:"2250757333736",
-  /* Codes valides générés :
-     - CLW-2026-VIP1
-     - CLW-WAVE-10000
-     - CLW-OMCI-2026
-     - CLW-GOLD-9001
-     - CLW-PRO1-2026
-     - CLW-FAST-3373
-     - CLW-ABID-2026
-     - CLW-90JS-VIP8
-  */
+  days:30,
   codeHashes:[
+    "2800228999690325","6563418240282511","4821302899677356","266277272692446","8481280028910141","2234457778793074","8561452607645327","2131648118054068","2163163100515304","6007882809866564","5416775543484992","8429467756683307","4256052017239672","1639837467702257","4325270997501654","7564750041661330","2446624864083736","4163575560752893","7197310270555258","2344395195639695","3841409600194703","2412356013874147","5212405534181019","8071848298235281","536347776072933","6207044515676159","7451620242844840","7887469816868325","8123064637558405","8513760963121942",
     "4647857955071901","2849165932243017","5831609964143850","3592680832948715",
     "5610020132596924","6288583205126055","1421744294304284","5334793579297343",
     "6193261337082725","4813537626374129","7809158927514286","3737121614483031",
     "2562670709487639","5102975672716091","6489962364024002","8053960695412945"
   ],
   free:{
-    daysMax:5, // Les 5 premiers jours du parcours 90 jours sont gratuits
+    daysMax:5, phrase:['social'], // Les 5 premiers jours du parcours 90 jours sont gratuits
     vocab:['travel','daily'],
     reading:['r1'],
     listen:['l1'],
@@ -288,6 +285,8 @@ const store={
 };
 const cyrb53=(str,seed=0)=>{let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;for(let i=0,ch;i<str.length;i++){ch=str.charCodeAt(i);h1=Math.imul(h1^ch,2654435761);h2=Math.imul(h2^ch,1597334677);}h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);return 4294967296*(2097151&h2)+(h1>>>0);};
 const normCode=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const STORE_EXP='clw_premium_exp_v3',STORE_USED='clw_codes_used';
+const premExp=()=>{let e=+store.get(STORE_EXP)||0;if(!e&&store.get(STORE_PREM)==='1'){e=Date.now()+30*864e5;store.set(STORE_EXP,e);}return e;};
 const isLocked=(kind,id)=>!S.premium&&!CONFIG.free[kind].includes(id);
 const lockIco=()=>`<span class="lk" title="Contenu Premium">${ico('lock')}</span>`;
 const lk=(k,i)=>isLocked(k,i)?lockIco():'';
@@ -302,16 +301,17 @@ function paywall(feature){
   m.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="pwt">
     <button class="x" data-act="pwclose" aria-label="Fermer">×</button>
     <h2 id="pwt">Passer à Clearway Premium</h2>
-    <p class="mut small" style="margin:4px 0 0">${feature?'Débloquez : <b>'+esc(feature)+'</b> et tout le programme complet.':'Accédez à l'intégralité du programme sur 3 mois sans restriction.'}</p>
+    <p class="mut small" style="margin:4px 0 0">${feature?'Débloquez : <b>'+esc(feature)+'</b> et tout le programme complet.':'Accédez à l\'intégralité du programme sur 3 mois sans restriction.'}</p>
     
     <div class="price-tag">
       <div><span class="small">Abonnement tout inclus</span><br><b>${esc(CONFIG.priceLabel)}</b></div>
-      <span class="lv lv-C">Sans engagement</span>
+      <span class="lv lv-C">Accès 30 jours</span>
     </div>
 
     <ul class="benefits">
       <li>✅ <b>Programme complet 90 jours</b> (Séquences quotidiennes A1 → C1)</li>
       <li>✅ <b>100 mots de vocabulaire</b> en 10 thèmes + audio</li>
+      <li>✅ <b>Quiz du jour, révisions espacées</b> et 5 packs d'expressions</li>
       <li>✅ <b>Atelier Speaking</b> avec reconnaissance vocale</li>
       <li>✅ <b>Tous les textes, audios, dictées, essais et tests</b></li>
     </ul>
@@ -347,7 +347,7 @@ function paywall(feature){
 function updatePrem(){
   const b=document.getElementById('prembox');if(!b)return;
   b.innerHTML=S.premium
-    ?'<b>⭐ Membre Premium Actif</b><span class="small">Accès complet 90 jours débloqué.</span><button class="lnk" data-act="premoff">Désactiver sur cet appareil</button>'
+    ?'<b>⭐ Membre Premium Actif</b><span class="small">Il reste '+Math.max(1,Math.ceil((premExp()-Date.now())/864e5))+' jour(s) d\'accès.</span><button class="lnk" data-act="premoff">Désactiver sur cet appareil</button>'
     :`<b>Version Gratuite</b><span class="small">Débloquez les 90 jours (${CONFIG.priceLabel}).</span><button class="btn amber sm" style="width:100%" data-act="paywall" data-f="">Passer en Premium</button>`;
 }
 
@@ -379,13 +379,17 @@ const ICONS={
   video:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>',
   speaker:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 010 6"/><path d="M18.5 6.5a8 8 0 010 11"/>',
   stop:'<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  chat:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>',
+  trophy:'<path d="M8 4h8v5a4 4 0 01-8 0z"/><path d="M8 6H4v2a3 3 0 003 3M16 6h4v2a3 3 0 01-3 3"/><path d="M12 13v4M8 20h8"/>',
   lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/>'
 };
 const ico=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n]}</svg>`;
 const NAV=[
   {id:'home',label:'Accueil',ic:'home'},
   {id:'plan',label:'Parcours 90 Jours',ic:'plan'},
+  {id:'progress',label:'Progrès',ic:'trophy'},
   {id:'vocab',label:'Vocabulaire',ic:'vocab'},
+  {id:'phrases',label:'Expressions',ic:'chat'},
   {id:'reading',label:'Reading',ic:'read'},
   {id:'listening',label:'Listening',ic:'listen'},
   {id:'speaking',label:'Speaking',ic:'speak'},
@@ -694,7 +698,26 @@ const VOCAB={
   ["policy","/ˈpɒləsi/","politique, règlement","What is the company's refund policy?"],
   ["citizen","/ˈsɪtɪzn/","citoyen","Every citizen has the right to vote."],
   ["sustainability","/səˌsteɪnəˈbɪləti/","durabilité","Sustainability is vital for our planet."],
-  ["inequality","/ˌɪnɪˈkwɒləti/","inégalité","Education helps reduce social inequality."]]}
+  ["inequality","/ˌɪnɪˈkwɒləti/","inégalité","Education helps reduce social inequality."]]},
+ abidjan:{label:"Vivre à Abidjan",words:[
+  ["traffic jam","/ˈtræfɪk dʒæm/","embouteillage","I was late because of the traffic jam."],
+  ["street vendor","/striːt ˈvendə/","vendeur ambulant","The street vendor sells fresh mangoes."],
+  ["lagoon","/ləˈɡuːn/","lagune","We crossed the lagoon by boat."],
+  ["market","/ˈmɑːkɪt/","marché","I buy vegetables at the market."],
+  ["minibus","/ˈmɪnibʌs/","minibus (gbaka)","The minibus is full this morning."],
+  ["cocoa","/ˈkəʊkəʊ/","cacao","Côte d'Ivoire is the largest cocoa producer."],
+  ["plantain","/ˈplæntɪn/","banane plantain","We fry plantain with spicy sauce."],
+  ["humid","/ˈhjuːmɪd/","humide","The weather is hot and humid today."],
+  ["rainy season","/ˈreɪni ˈsiːzn/","saison des pluies","The rainy season starts in April."],
+  ["neighbourhood","/ˈneɪbəhʊd/","quartier","My neighbourhood is quiet at night."]]}
+};
+
+const PHRASES={
+ social:{label:"Rencontres",items:[["Nice to meet you. I'm from Abidjan.","Enchanté. Je viens d'Abidjan."],["Could you say that again, please?","Pouvez-vous répéter, s'il vous plaît ?"],["What do you do for a living?","Que faites-vous dans la vie ?"],["I'm still learning English, so please speak slowly.","J'apprends encore l'anglais, parlez lentement."],["Let's keep in touch.","Restons en contact."]]},
+ cafe:{label:"Café & restaurant",items:[["Could I see the menu, please?","Puis-je voir la carte, s'il vous plaît ?"],["I'll have the grilled fish with rice.","Je prendrai le poisson braisé avec du riz."],["Is the service included?","Le service est-il compris ?"],["Could we have the bill, please?","L'addition, s'il vous plaît."],["I'm allergic to peanuts.","Je suis allergique aux arachides."]]},
+ work:{label:"Au travail",items:[["I'll send you the report by Friday.","Je vous envoie le rapport d'ici vendredi."],["Could we reschedule the meeting?","Pouvons-nous reprogrammer la réunion ?"],["I'd like to follow up on my email.","Je reviens vers vous au sujet de mon e-mail."],["Let me check and get back to you.","Je vérifie et je reviens vers vous."],["We are on track to meet the deadline.","Nous sommes dans les temps pour la date limite."]]},
+ travel:{label:"Voyage & transport",items:[["Where is the check-in desk?","Où est le comptoir d'enregistrement ?"],["My luggage has not arrived.","Mes bagages ne sont pas arrivés."],["How much is a ticket to the city centre?","Combien coûte un billet pour le centre-ville ?"],["Could you drop me at the next stop?","Pouvez-vous me déposer au prochain arrêt ?"],["I have a reservation under the name Kouassi.","J'ai une réservation au nom de Kouassi."]]},
+ urgent:{label:"Santé & urgences",items:[["I need a doctor, it's urgent.","J'ai besoin d'un médecin, c'est urgent."],["I have a fever and a bad headache.","J'ai de la fièvre et un fort mal de tête."],["Please call an ambulance.","Appelez une ambulance, s'il vous plaît."],["I've lost my passport.","J'ai perdu mon passeport."],["Is there a pharmacy nearby?","Y a-t-il une pharmacie près d'ici ?"]]}
 };
 
 /* ============ Données : reading ============ */
@@ -794,59 +817,26 @@ const WRITINGS=[
   fr:"Écrivez un e-mail à un ami pour raconter vos dernières vacances.",
   en:"Write an email to a friend about your last holiday. Say where you went, what you did and what you liked.",
   phrases:["I hope you're well.","Last summer I went to…","The weather was…","We visited…","I really enjoyed…","Write soon!"],
-  checks:[["Une formule d'accueil (Hi, Hello, Dear…)",/(hi|hello|dear)/i],["Des verbes au passé (went, visited, was…)",/(was|were|went|visited|had|saw|ate|did|enjoyed|stayed)/i],["Une formule de fin (See you, Take care…)",/(best wishes|see you|take care|love|regards|bye|write soon)/i]],
-  model:"Hi Sophie,
-
-I hope you're well! I'm writing to tell you about my holiday in Grand-Bassam. Last August, my brother and I went there for a week. The weather was hot and sunny, so we spent a lot of time by the beach.
-
-We visited the historic district and bought local crafts. I also tried fresh grilled fish, and it was delicious! I really enjoyed the trip, and I want to go back next year.
-
-What about you? Did you go anywhere this summer?
-
-Take care,
-Kouakou"},
+  checks:[["Une formule d'accueil (Hi, Hello, Dear…)",/\b(hi|hello|dear)\b/i],["Des verbes au passé (went, visited, was…)",/\b(was|were|went|visited|had|saw|ate|did|enjoyed|stayed)\b/i],["Une formule de fin (See you, Take care…)",/\b(best wishes|see you|take care|love|regards|bye|write soon)\b/i]],
+  model:"Hi Sophie,\n\nI hope you're well! I'm writing to tell you about my holiday in Grand-Bassam. Last August, my brother and I went there for a week. The weather was hot and sunny, so we spent a lot of time by the beach.\n\nWe visited the historic district and bought local crafts. I also tried fresh grilled fish, and it was delicious! I really enjoyed the trip, and I want to go back next year.\n\nWhat about you? Did you go anywhere this summer?\n\nTake care,\nKouakou"},
  {id:'w2',lv:'B1',title:"Donner son opinion",min:100,
   fr:"Donnez votre opinion argumentée sur un sujet de société.",
   en:"Do you think students should wear school uniforms? Give your opinion and support it with reasons and examples.",
   phrases:["In my opinion,","I strongly believe that…","For example,","On the other hand,","Moreover,","In conclusion,"],
-  checks:[["Une expression d'opinion (I think, In my opinion…)",/(in my opinion|i think|i believe|i feel|personally|i agree|i disagree)/i],["Des connecteurs (because, however, for example…)",/(because|however|therefore|for example|firstly|moreover|on the other hand|as a result)/i],["Une conclusion (In conclusion, Overall…)",/(in conclusion|to sum up|overall|to conclude|finally)/i]],
-  model:"In my opinion, school uniforms are a good idea, although they are not perfect.
-
-Firstly, uniforms make students feel equal. When everybody wears the same clothes, nobody is judged because of expensive brands. For example, in my school, there was much less pressure to buy fashionable clothes. Moreover, getting dressed in the morning is quicker and cheaper for families.
-
-On the other hand, some people say that uniforms limit self-expression. This is true, but students can still show their personality through their hobbies, their ideas and their behaviour.
-
-In conclusion, I believe that the advantages of uniforms are greater than the disadvantages, because they encourage equality and save time and money."},
+  checks:[["Une expression d'opinion (I think, In my opinion…)",/\b(in my opinion|i think|i believe|i feel|personally|i agree|i disagree)\b/i],["Des connecteurs (because, however, for example…)",/\b(because|however|therefore|for example|firstly|moreover|on the other hand|as a result)\b/i],["Une conclusion (In conclusion, Overall…)",/\b(in conclusion|to sum up|overall|to conclude|finally)\b/i]],
+  model:"In my opinion, school uniforms are a good idea, although they are not perfect.\n\nFirstly, uniforms make students feel equal. When everybody wears the same clothes, nobody is judged because of expensive brands. For example, in my school, there was much less pressure to buy fashionable clothes. Moreover, getting dressed in the morning is quicker and cheaper for families.\n\nOn the other hand, some people say that uniforms limit self-expression. This is true, but students can still show their personality through their hobbies, their ideas and their behaviour.\n\nIn conclusion, I believe that the advantages of uniforms are greater than the disadvantages, because they encourage equality and save time and money."},
  {id:'w3',lv:'B2',title:"Essai argumenté",min:150,
   fr:"Rédigez un essai structuré : introduction, arguments, contre-arguments, conclusion.",
   en:"'Social media does more harm than good.' To what extent do you agree? Write a structured essay.",
   phrases:["It is often claimed that…","Admittedly,","Nevertheless,","Whereas…","Such as…","All things considered,"],
-  checks:[["Une introduction qui pose le sujet",/(nowadays|it is often (said|claimed)|in recent years|this essay|today)/i],["Un contraste (although, whereas, nevertheless…)",/(although|whereas|nevertheless|despite|while|on the other hand|however)/i],["Un exemple (for instance, such as…)",/(for instance|for example|such as)/i],["Une conclusion",/(in conclusion|to sum up|all things considered|overall|to conclude)/i]],
-  model:"Nowadays, social media platforms shape how we communicate, work and even think. It is often claimed that they do more harm than good, but the reality is more nuanced.
-
-Admittedly, the risks are serious. Excessive use is linked to anxiety, particularly among teenagers, and false information spreads faster than corrections. Furthermore, constant comparison with other people's carefully selected lives can damage self-esteem.
-
-Nevertheless, social media also brings real benefits. Isolated people can find supportive communities, small businesses can reach customers worldwide, and during emergencies, platforms allow authorities to share urgent information.
-
-All things considered, I agree only partly with the statement. The harm is real, but it comes mainly from how platforms are designed and used. With better regulation and digital education, the benefits could outweigh the damage."},
+  checks:[["Une introduction qui pose le sujet",/\b(nowadays|it is often (said|claimed)|in recent years|this essay|today)\b/i],["Un contraste (although, whereas, nevertheless…)",/\b(although|whereas|nevertheless|despite|while|on the other hand|however)\b/i],["Un exemple (for instance, such as…)",/\b(for instance|for example|such as)\b/i],["Une conclusion",/\b(in conclusion|to sum up|all things considered|overall|to conclude)\b/i]],
+  model:"Nowadays, social media platforms shape how we communicate, work and even think. It is often claimed that they do more harm than good, but the reality is more nuanced.\n\nAdmittedly, the risks are serious. Excessive use is linked to anxiety, particularly among teenagers, and false information spreads faster than corrections. Furthermore, constant comparison with other people's carefully selected lives can damage self-esteem.\n\nNevertheless, social media also brings real benefits. Isolated people can find supportive communities, small businesses can reach customers worldwide, and during emergencies, platforms allow authorities to share urgent information.\n\nAll things considered, I agree only partly with the statement. The harm is real, but it comes mainly from how platforms are designed and used. With better regulation and digital education, the benefits could outweigh the damage."},
  {id:'w4',lv:'B2',title:"E-mail professionnel",min:80,
   fr:"Rédigez un e-mail formel à un client pour demander un rendez-vous.",
   en:"Write a formal email to a client's manager to request a meeting about a delayed order. Be polite and suggest two possible dates.",
   phrases:["Dear Mr/Ms …,","I am writing to…","Would it be possible to…?","I would appreciate it if…","Thank you for your understanding.","Kind regards,"],
-  checks:[["Une formule d'appel formelle (Dear Mr/Ms…)",/dear/i],["Une demande polie (Would it be possible…, I would like to…)",/(would it be possible|could we|i would like to|i would appreciate|could you)/i],["Un remerciement",/(thank you|thanks|grateful|appreciate)/i],["Une formule de politesse finale (Kind regards…)",/(kind regards|best regards|yours sincerely|yours faithfully|sincerely)/i]],
-  model:"Subject: Request for a meeting – Order no. 4587
-
-Dear Ms Carter,
-
-I am writing regarding order no. 4587, which was due to arrive on 12 March. Unfortunately, we have been informed that the delivery will be delayed by two weeks.
-
-Would it be possible to arrange a short meeting to discuss a solution? I could be available on Tuesday 18 March at 10 a.m. or on Thursday 20 March at 2 p.m. We can also meet by video call if you prefer.
-
-I would appreciate it if you could let me know which date suits you best. Thank you for your understanding.
-
-Kind regards,
-Julien Moreau
-Sales Manager"}
+  checks:[["Une formule d'appel formelle (Dear Mr/Ms…)",/\bdear\b/i],["Une demande polie (Would it be possible…, I would like to…)",/\b(would it be possible|could we|i would like to|i would appreciate|could you)\b/i],["Un remerciement",/\b(thank you|thanks|grateful|appreciate)\b/i],["Une formule de politesse finale (Kind regards…)",/\b(kind regards|best regards|yours sincerely|yours faithfully|sincerely)\b/i]],
+  model:"Subject: Request for a meeting – Order no. 4587\n\nDear Ms Carter,\n\nI am writing regarding order no. 4587, which was due to arrive on 12 March. Unfortunately, we have been informed that the delivery will be delayed by two weeks.\n\nWould it be possible to arrange a short meeting to discuss a solution? I could be available on Tuesday 18 March at 10 a.m. or on Thursday 20 March at 2 p.m. We can also meet by video call if you prefer.\n\nI would appreciate it if you could let me know which date suits you best. Thank you for your understanding.\n\nKind regards,\nJulien Moreau\nSales Manager"}
 ];
 const CONNECTORS=["however","therefore","moreover","furthermore","although","because","firstly","secondly","finally","in addition","for example","for instance","on the other hand","nevertheless","despite","whereas","while","in conclusion","as a result","besides","admittedly","such as"];
 const STOP=new Set("the a an and or but to of in on at for with is are was were be been it this that i you he she we they my your his her our their as by from not have has had do does did will would can could so if than then there what which who".split(" "));
@@ -943,7 +933,7 @@ const VIDEOS=[
 const savedData=(()=>{try{return JSON.parse(store.get(STORE_DATA)||'null');}catch(e){return null;}})();
 const S={
   view:'home',
-  premium:store.get(STORE_PREM)==='1',
+  premium:Date.now()<premExp(),
   xp:savedData?.xp||0,
   streak:savedData?.streak||1,
   goal:50,
@@ -959,7 +949,7 @@ const S={
   write:{task:'w1',texts:{},reports:{},model:{}},
   test:{open:null},
   vis:{tab:'dict',cat:'animals'},
-  vid:{id:null,msg:''}
+  vid:{id:null,msg:''},phr:{cat:'social'}
 };
 
 /* ============ Rendu général ============ */
@@ -990,6 +980,8 @@ V.home=()=>{
   const tiles=[
    ['plan',"Parcours 90 Jours",`Votre programme quotidien structuré sur 3 mois (${S.daysDone.size}/90 jours faits).`],
    ['vocab',"Vocabulaire",`${all.length} mots en 10 thèmes avec cartes mémoire, phonétique et quiz.`],
+   ['progress',"Progrès","Votre carte des 90 jours, badges et niveau estimé."],
+   ['phrases',"Expressions","Phrases utiles par situation : café, travail, voyage, urgences."],
    ['speaking',"Speaking (Oral)","Entraînez votre prononciation avec reconnaissance vocale."],
    ['reading',"Reading","Textes de A2 à B2 avec glossaire cliquable et questions."],
    ['listening',"Listening","Dialogues, annonces, exposés professionnels et dictées audio."],
@@ -1040,15 +1032,21 @@ V.plan=()=>{
     const dayWords=[allWords[(idx*3)%allWords.length], allWords[(idx*3+1)%allWords.length], allWords[(idx*3+2)%allWords.length]];
     const isDone=S.daysDone.has(openD);
     const lv=openD<=30?'A1–A2':openD<=60?'B1':'B2–C1';
+    const prevW=idx>0?[0,1,2].map(k=>allWords[((idx-1)*3+k)%allWords.length]):[];
+    const pk=Object.keys(PHRASES),phr=PHRASES[pk[idx%pk.length]].items[idx%5];
+    const rd=READINGS[idx%READINGS.length];
+    const mkq=w=>Q('Que signifie « '+w[0]+' » ?',w[2],shuffle(allWords.filter(x=>x[2]!==w[2])).slice(0,3).map(x=>x[2]),w[3]);
+    const dayQs=[...dayWords,...prevW].map(mkq);
 
     $('#view').innerHTML=`<button class="btn ghost sm" data-act="dayback">← Retour au calendrier 90 jours</button>
     <div class="pagehead" style="margin-top:16px">
       <div class="row"><span class="lv lv-${lv[0]}">Mois ${Math.ceil(openD/30)} · ${lv}</span>${isDone?'<span class="lv lv-A">✓ Séquence validée</span>':''}</div>
       <h1 style="margin-top:8px">Jour ${openD} : ${esc(topic[0])}</h1>
-      <p>Temps estimé : 15 à 20 minutes. Complétez les 3 étapes ci-dessous pour valider votre journée.</p>
+      <p>Temps estimé : 20 à 25 minutes. Complétez les 6 étapes ci-dessous pour valider votre journée.</p>
     </div>
 
     <div class="card" style="max-width:780px">
+      ${prevW.length?`<div class="seq-step" style="border-left-color:var(--mut)"><h4>Échauffement : réviser hier (2 min)</h4><p class="small mut">Relisez à voix haute les mots du Jour ${openD-1} avant de commencer :</p><p style="margin:0"><b>${prevW.map(w=>esc(w[0])).join(' · ')}</b></p></div>`:''}
       <div class="seq-step">
         <h4>Étape 1 : Vocabulaire clé du jour (5 min)</h4>
         <p class="small mut">Écoutez et répétez ces 3 mots essentiels :</p>
@@ -1080,6 +1078,19 @@ V.plan=()=>{
         </div>
       </div>
 
+      <div class="seq-step" style="border-left-color:var(--om)">
+        <h4>Étape 4 : Phrase du jour (2 min)</h4>
+        <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div><b>${esc(phr[0])}</b><div class="small mut">${esc(phr[1])}</div></div>${spk(phr[0],0.9)}</div>
+      </div>
+      <div class="seq-step" style="border-left-color:var(--wave)">
+        <h4>Étape 5 : Lecture guidée (5 min)</h4>
+        <p class="small mut">Texte conseillé aujourd'hui : <b>${esc(rd.title||'Reading')}</b></p>
+        <button class="btn sm ghost" data-act="goread" data-id="${rd.id}">Lire le texte</button>
+      </div>
+      <div class="seq-step" style="border-left-color:var(--ultra-2)">
+        <h4>Étape 6 : Quiz du jour (3 min)</h4>
+        <div id="dayquiz"></div>
+      </div>
       <div class="row" style="justify-content:space-between;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)">
         <button class="btn ${isDone?'ghost':'ok'}" data-act="toggleday" data-d="${openD}">
           ${isDone?'✓ Journée terminée (+20 XP gagnés)':'Valider le Jour '+openD+' (+20 XP)'}
@@ -1087,6 +1098,7 @@ V.plan=()=>{
         ${openD<90?`<button class="btn" data-act="openday" data-d="${openD+1}">Jour suivant (${openD+1}) →</button>`:''}
       </div>
     </div>`;
+    {const dq=$('#dayquiz');if(dq)runQuiz(dq,dayQs);}
     return;
   }
 
@@ -1121,6 +1133,25 @@ V.plan=()=>{
   </div>
   <p class="mut small" style="margin-bottom:14px">${monthDesc} ${!S.premium?'(Les 5 premiers jours sont gratuits pour tester la méthode.)':''}</p>
   <div class="road-grid">${cards}</div>`;
+};
+
+/* ============ Expressions ============ */
+V.phrases=()=>{
+  const k=S.phr.cat,c=PHRASES[k];
+  $('#view').innerHTML=head("Expressions du quotidien","Les phrases utiles par situation. Écoutez, répétez à voix haute, puis réutilisez-les dans l'atelier Speaking.")+
+  `<div class="tabs">${Object.entries(PHRASES).map(([id,p])=>`<button class="chip ${id===k?'on':''}" data-act="pcat" data-k="${id}">${p.label}${lk('phrase',id)}</button>`).join('')}</div>
+  <div class="grid">${c.items.map(p=>`<div class="card row" style="justify-content:space-between;flex-wrap:nowrap"><div><b>${esc(p[0])}</b><div class="small mut">${esc(p[1])}</div></div>${spk(p[0],0.9)}</div>`).join('')}</div>`;
+};
+/* ============ Progrès ============ */
+V.progress=()=>{
+  const n=S.daysDone.size,w=S.known.size,cur=n+1;
+  const lvl=n>=60?'B2–C1':n>=30?'B1':'A1–A2';
+  const bd=[[n>=1,'🌱','Premier pas','1 jour validé'],[n>=7,'🔥','Une semaine','7 jours validés'],[n>=30,'🥉','Mois 1','30 jours validés'],[n>=60,'🥈','Mois 2','60 jours validés'],[n>=90,'🏆','Programme complet','90 jours validés'],[w>=50,'📚','50 mots acquis','Vocabulaire'],[w>=100,'🎓','100 mots acquis','Vocabulaire'],[S.tests.length>=1,'✅','Premier test','Section Tests']];
+  let hm='';for(let d=1;d<=90;d++)hm+=`<button class="${S.daysDone.has(d)?'done':d===cur?'curr':''}" data-act="openday" data-d="${d}" aria-label="Jour ${d}">${d}</button>`;
+  $('#view').innerHTML=head("Mes progrès","Votre avancée sur les 90 jours, vos badges et votre niveau estimé.")+
+  `<div class="grid" style="margin-bottom:18px"><div class="card"><b style="font-size:28px;font-family:var(--serif)">${n}/90</b><div class="small mut">jours validés</div></div><div class="card"><b style="font-size:28px;font-family:var(--serif)">${w}</b><div class="small mut">mots acquis</div></div><div class="card"><b style="font-size:28px;font-family:var(--serif)">${lvl}</b><div class="small mut">niveau estimé</div></div></div>
+  <div class="card" style="margin-bottom:18px"><b>Carte des 90 jours</b><div class="hm">${hm}</div></div>
+  <h2>Badges</h2><div class="grid">${bd.map(b=>`<div class="badge ${b[0]?'':'off'}"><span>${b[1]}</span><div><b>${b[2]}</b><div class="small mut">${b[3]}</div></div></div>`).join('')}</div>`;
 };
 
 /* ============ Vocabulaire ============ */
@@ -1199,7 +1230,7 @@ V.reading=()=>{
   }
   const r=READINGS.find(x=>x.id===id);
   const keys=Object.keys(r.gloss).sort((a,b)=>b.length-a.length);
-  const re=new RegExp('\b('+keys.map(k=>k.replace(/[.*+?^${}()|[\]\]/g,'\$&')).join('|')+')\b','gi');
+  const re=new RegExp('\\b('+keys.map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')\\b','gi');
   const html=esc(r.text).replace(re,m=>`<span class="gl" data-act="gloss" data-w="${m.toLowerCase()}" tabindex="0">${m}</span>`);
   $('#view').innerHTML=`<button class="btn ghost sm" data-act="rback">← Tous les textes</button>
   <div class="pagehead" style="margin-top:16px"><h1>${r.title}</h1><p>${lvBadge(r.lv)} &nbsp;Lecture ≈ ${r.min} min</p></div>
@@ -1238,8 +1269,7 @@ V.listening=()=>{
     <label class="small mut">Vitesse <select id="lrate"><option value="0.7">Lente</option><option value="0.85">Un peu lente</option><option value="1" selected>Normale</option><option value="1.2">Rapide</option></select></label></div>
     <p class="small mut" style="margin-top:12px">Écoutez 2 ou 3 fois avant de répondre. Affichez la transcription seulement en dernier recours.</p>
     <button class="btn ghost sm" data-act="ltrans">Afficher / masquer la transcription</button>
-    <div id="trans" class="model" style="display:none;margin-top:12px">${x.lines.map(l=>esc(l.t)).join('
-')}</div></div>
+    <div id="trans" class="model" style="display:none;margin-top:12px">${x.lines.map(l=>esc(l.t)).join('\n')}</div></div>
   <div class="card"><h2>Questions</h2><div id="quiz"></div></div></div>`;
   runQuiz($('#quiz'),x.qs,{});
 };
@@ -1247,7 +1277,7 @@ V.listening=()=>{
 /* ============ Writing ============ */
 V.writing=()=>{
   const W=S.write,t=WRITINGS.find(x=>x.id===W.task),txt=W.texts[t.id]||'';
-  const words=(txt.trim().match(/[\w'’-]+/g)||[]).length;
+  const words=(txt.trim().match(/\b[\w'’-]+\b/g)||[]).length;
   $('#view').innerHTML=head("Writing","Choisissez un sujet, rédigez en anglais, puis obtenez une analyse automatique : longueur, structure et connecteurs.")+
   `<div class="tabs">${WRITINGS.map(w=>`<button class="chip ${w.id===t.id?'on':''}" data-act="wtask" data-id="${w.id}">${w.title} · ${w.lv}${lk('write',w.id)}</button>`).join('')}</div>
   <div class="split"><div>
@@ -1261,11 +1291,11 @@ V.writing=()=>{
   <div class="card" id="wreport">${W.reports[t.id]||'<h2>Analyse</h2><p class="mut">Rédigez votre texte puis touchez « Analyser mon texte ». Vous verrez ici le nombre de mots, les éléments attendus et les connecteurs utilisés.</p>'}</div></div>`;
 };
 function analyzeWriting(t,txt){
-  const words=txt.trim().match(/[\w'’-]+/g)||[];
+  const words=txt.trim().match(/\b[\w'’-]+\b/g)||[];
   const n=words.length;
   const sents=(txt.match(/[^.!?]+[.!?]+/g)||[txt]).filter(s=>s.trim()).length;
   const low=txt.toLowerCase();
-  const used=CONNECTORS.filter(c=>new RegExp('\b'+c+'\b').test(low));
+  const used=CONNECTORS.filter(c=>new RegExp('\\b'+c+'\\b').test(low));
   const freq={};words.forEach(w=>{w=w.toLowerCase();if(w.length>3&&!STOP.has(w))freq[w]=(freq[w]||0)+1;});
   const rep=Object.entries(freq).filter(e=>e[1]>=4).sort((a,b)=>b[1]-a[1]).slice(0,4);
   const checks=t.checks.map(c=>[c[0],c[1].test(txt)]);
@@ -1285,7 +1315,7 @@ function analyzeWriting(t,txt){
    <h3 style="margin:14px 0 4px">Éléments attendus</h3>
    ${checks.map(c=>`<div class="check"><i class="${c[1]?'y':'n'}">${c[1]?'✓':'–'}</i><span>${c[0]}</span></div>`).join('')}
    <h3 style="margin:14px 0 4px">Connecteurs trouvés</h3>
-   <p>${used.length?used.map(u=>`<span class="lv lv-B" style="margin:0 4px 4px 0">${u}</span>`).join(''):'<span class="mut">Aucun pour l'instant.</span>'}</p>
+   <p>${used.length?used.map(u=>`<span class="lv lv-B" style="margin:0 4px 4px 0">${u}</span>`).join(''):'<span class="mut">Aucun pour l\'instant.</span>'}</p>
    <h3 style="margin:14px 0 4px">Conseils</h3>${tips.map(x=>`<p>• ${esc(x)}</p>`).join('')}`;
 }
 
@@ -1424,7 +1454,7 @@ const A={
  gloss:t=>{const r=READINGS.find(x=>x.id===S.read.open);$('#gloss').innerHTML=`<b>${esc(t.dataset.w)}</b> — ${esc(r.gloss[t.dataset.w])}`;speak(t.dataset.w,0.9);},
  /* listening */
  ltab:t=>{S.listen.tab=t.dataset.t;S.listen.open=null;render();},
- lopen:t=>{if(isLocked('listen',t.dataset.id))return paywall('Cet exercice d'écoute');S.listen.open=t.dataset.id;render(true);},
+ lopen:t=>{if(isLocked('listen',t.dataset.id))return paywall('Cet exercice d\'écoute');S.listen.open=t.dataset.id;render(true);},
  lback:()=>{S.listen.open=null;render(true);},
  lplay:()=>{const x=LISTENS.find(a=>a.id===S.listen.open);playLines(x.lines,parseFloat($('#lrate').value));},
  ltrans:()=>{const e=$('#trans');e.style.display=e.style.display==='none'?'block':'none';},
@@ -1445,7 +1475,7 @@ const A={
  dnext:()=>{if(!S.premium&&S.listen.dict+1>=CONFIG.free.dictN)return paywall('Les dictées suivantes');S.listen.dict++;render();},
  dreset:()=>{S.listen.dict=0;render();},
  /* writing */
- wtask:t=>{if(isLocked('write',t.dataset.id))return paywall('Ce sujet d'écriture');S.write.task=t.dataset.id;render();},
+ wtask:t=>{if(isLocked('write',t.dataset.id))return paywall('Ce sujet d\'écriture');S.write.task=t.dataset.id;render();},
  wphrase:t=>{const ta=$('#wtext');ta.value+=(ta.value&&!/\s$/.test(ta.value)?' ':'')+t.dataset.p+' ';ta.focus();ta.dispatchEvent(new Event('input'));},
  wmodel:()=>{const W=S.write;W.model[W.task]=!W.model[W.task];render();},
  wanalyze:()=>{
@@ -1463,6 +1493,9 @@ const A={
    if(m){S.vid.id=m[1];S.vid.msg='';}else{S.vid.msg="Lien non reconnu. Collez une adresse YouTube complète.";}
    render();
  },
+ /* nouveautés */
+ pcat:t=>{if(isLocked('phrase',t.dataset.k))return paywall('Ce pack d\'expressions');S.phr.cat=t.dataset.k;render();},
+ goread:t=>{if(isLocked('reading',t.dataset.id))return paywall('Ce texte de lecture');S.view='reading';S.plan.openDay=null;S.read.open=t.dataset.id;render(true);},
  /* premium & Mobile Money */
  paywall:t=>paywall(t.dataset.f||''),
  pwclose:()=>closePaywall(),
@@ -1474,12 +1507,14 @@ const A={
    const v=normCode($('#pwcode').value);
    if(v.length<6){$('#pwmsg').textContent="Saisissez votre code d'accès.";return;}
    // Vérification par empreinte ou codes maîtres
-   const masterCodes=['CLW2026VIP1','CLWWAVE10000','CLWOMCI2026','CLWGOLD9001','CLWPRO12026','CLWFAST3373','CLWABID2026','CLW90JSVIP8'];
-   if(CONFIG.codeHashes.includes(String(cyrb53(v))) || masterCodes.includes(v)){
-     S.premium=true;store.set(STORE_PREM,'1');closePaywall();toast('🎉 Félicitations ! Accès Premium activé.');render();
+   const hv=String(cyrb53(v));let used=[];try{used=JSON.parse(store.get(STORE_USED)||'[]');}catch(e){}
+   if(CONFIG.codeHashes.includes(hv)&&used.includes(hv)){$('#pwmsg').textContent="Ce code a déjà été utilisé sur cet appareil. Demandez un nouveau code pour renouveler.";return;}
+   if(CONFIG.codeHashes.includes(hv)){
+     used.push(hv);store.set(STORE_USED,JSON.stringify(used));
+     S.premium=true;store.set(STORE_PREM,'1');store.set(STORE_EXP,Date.now()+CONFIG.days*864e5);closePaywall();toast('🎉 Félicitations ! Accès Premium activé.');render();
    }else{$('#pwmsg').textContent="Code invalide. Vérifiez votre code ou contactez le +225 07 57 33 37 36.";}
  },
- premoff:()=>{S.premium=false;store.set(STORE_PREM,'0');toast('Premium désactivé sur cet appareil.');render(true);}
+ premoff:()=>{S.premium=false;store.set(STORE_PREM,'0');store.set(STORE_EXP,0);toast('Premium désactivé sur cet appareil.');render(true);}
 };
 
 document.addEventListener('click',e=>{
@@ -1496,7 +1531,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('input',e=>{
   if(e.target.id==='wtext'){
     const t=WRITINGS.find(x=>x.id===S.write.task);S.write.texts[t.id]=e.target.value;
-    const n=(e.target.value.trim().match(/[\w'’-]+/g)||[]).length;
+    const n=(e.target.value.trim().match(/\b[\w'’-]+\b/g)||[]).length;
     $('#wcount').textContent=`${n} / ${t.min} mots minimum`;
   }
 });
